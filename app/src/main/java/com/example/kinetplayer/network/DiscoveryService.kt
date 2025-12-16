@@ -19,6 +19,8 @@ class DiscoveryService {
     private val PORT = 6969
     private var multicastLock: android.net.wifi.WifiManager.MulticastLock? = null
     var onLog: ((String) -> Unit)? = null
+    var width: Int = 100
+    var height: Int = 100
 
     fun start(context: android.content.Context) {
         if (job != null) return
@@ -48,6 +50,8 @@ class DiscoveryService {
                         val responseJson = JSONObject().apply {
                             put("type", "kinet-player")
                             put("name", deviceName)
+                            put("width", width)
+                            put("height", height)
                             // We don't necessarily need to send IP, the receiver has it.
                         }
                         

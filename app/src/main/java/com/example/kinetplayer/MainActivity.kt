@@ -54,6 +54,8 @@ class MainActivity : ComponentActivity() {
         // Load name
         val prefs = getSharedPreferences("kinet_prefs", Context.MODE_PRIVATE)
         discoveryService.deviceName = prefs.getString("player_name", "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}") ?: "Unknown"
+        discoveryService.width = prefs.getInt("player_width", 100)
+        discoveryService.height = prefs.getInt("player_height", 100)
 
         discoveryService.start(this)
         
@@ -69,8 +71,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    fun updateServiceName(newName: String) {
+    fun updateServiceConfig(newName: String, newWidth: Int, newHeight: Int) {
         discoveryService.deviceName = newName
+        discoveryService.width = newWidth
+        discoveryService.height = newHeight
     }
 
     override fun onDestroy() {
@@ -88,6 +92,8 @@ fun MainScreen(viewModel: MainViewModel) {
     // Name State
     val prefs = context.getSharedPreferences("kinet_prefs", Context.MODE_PRIVATE)
     var playerName by remember { mutableStateOf(prefs.getString("player_name", "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}") ?: "Unknown") }
+    var playerWidth by remember { mutableStateOf(prefs.getInt("player_width", 100).toString()) }
+    var playerHeight by remember { mutableStateOf(prefs.getInt("player_height", 100).toString()) }
     var showNameDialog by remember { mutableStateOf(false) }
 
     // Update Discovery Service with initial name
@@ -123,23 +129,54 @@ fun MainScreen(viewModel: MainViewModel) {
     // Name Edit Dialog
     if (showNameDialog) {
         var tempName by remember { mutableStateOf(playerName) }
+        var tempWidth by remember { mutableStateOf(playerWidth) }
+        var tempHeight by remember { mutableStateOf(playerHeight) }
         AlertDialog(
             onDismissRequest = { showNameDialog = false },
-            title = { Text("Edit Player Name") },
+            title = { Text("Edit Player Settings") },
             text = { 
-                OutlinedTextField(
-                    value = tempName, 
-                    onValueChange = { tempName = it },
-                    label = { Text("Name") }
-                ) 
+                Column {
+                    OutlinedTextField(
+                        value = tempName, 
+                        onValueChange = { tempName = it },
+                        label = { Text("Name") }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row {
+                        OutlinedTextField(
+                            value = tempWidth,
+                            onValueChange = { tempWidth = it },
+                            label = { Text("Width") },
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        OutlinedTextField(
+                            value = tempHeight,
+                            onValueChange = { tempHeight = it },
+                            label = { Text("Height") },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
             },
             confirmButton = {
                 TextButton(onClick = {
                     playerName = tempName
-                    prefs.edit().putString("player_name", tempName).apply()
+                    playerWidth = tempWidth
+                    playerHeight = tempHeight
+                    
+                    val w = tempWidth.toIntOrNull() ?: 100
+                    val h = tempHeight.toIntOrNull() ?: 100
+                    
+                    prefs.edit()
+                        .putString("player_name", tempName)
+                        .putInt("player_width", w)
+                        .putInt("player_height", h)
+                        .apply()
+                        
                     showNameDialog = false
-                    // Trigger name update in service (handled by callback prop which we will add)
-                    (context as? MainActivity)?.updateServiceName(tempName)
+                    // Trigger update in service
+                    (context as? MainActivity)?.updateServiceConfig(tempName, w, h)
                 }) { Text("Save") }
             },
             dismissButton = {
